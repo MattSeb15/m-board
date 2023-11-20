@@ -1,9 +1,63 @@
 import Canvas from './canvas'
 import Element from '../static/element'
-import { useState } from 'react'
+import { useState, useContext } from 'react'
+import { CanvasContext } from '../static/canvas'
 
 export function Aside() {
-	return <aside className='bg-aside h-full w-60'></aside>
+	const { elements, setElements, selectedElement, setSelectedElement } =
+		useContext(CanvasContext)
+
+	const handleOnClick = (
+		e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+		element: Element
+	) => {
+		e.preventDefault()
+		if (selectedElement?.key === element.key) {
+			setSelectedElement(null)
+			return
+		}
+		setSelectedElement(element)
+	}
+
+	return (
+		<aside className='bg-neutral-800 flex flex-col justify-between h-full w-60 p-2'>
+			<div className=''></div>
+			<div className='flex flex-col gap-2 bg-neutral-900/50'>
+				<h2 className='text-center'>Capas</h2>
+				<div className='flex flex-col gap-1 h-72 p-2 overflow-auto'>
+					{elements.map(element => {
+						return (
+							<div
+								onClick={e => handleOnClick(e, element)}
+								key={element.key}
+								style={{
+									border: `2px solid ${
+										selectedElement?.key === element.key ? 'red' : 'transparent'
+									}`,
+								}}
+								className='w-full p-2 h-10 cursor-pointer bg-neutral-700 flex items-center justify-between'>
+								<span className='w-32 truncate'>{element.content}</span>
+								<button
+									onClick={() => {
+										const newElements = elements.filter(
+											e => e.key !== element.key
+										)
+										setElements(newElements)
+									}}>
+									X
+								</button>
+							</div>
+						)
+					})}
+					{elements.length === 0 && (
+						<div className='w-full p-2 h-full flex items-center justify-center'>
+							No hay elementos
+						</div>
+					)}
+				</div>
+			</div>
+		</aside>
+	)
 }
 
 export function BottomBar() {
@@ -11,10 +65,10 @@ export function BottomBar() {
 		{
 			id: 'element1',
 			key: 'key1',
-			className: 'bg-red-500 truncate cursor-move',
+			className: 'border-container dashed thin truncate cursor-move',
 			content: 'Elemento 1',
 			dragged: false,
-			options: { zIndex: 1, width: 80, height: 20 },
+			options: { zIndex: 1, width: 80, height: 50 },
 		},
 		{
 			id: 'element2',

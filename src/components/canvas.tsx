@@ -5,7 +5,8 @@ import { CanvasContext } from '../static/canvas'
 
 const Canvas: React.FC = () => {
 	const canvasRef = useRef<HTMLDivElement>(null)
-	const { elements, setElements } = useContext(CanvasContext)
+	const { elements, setElements, selectedElement, setSelectedElement } =
+		useContext(CanvasContext)
 
 	const handleCanvasDrop = (e: React.DragEvent) => {
 		e.preventDefault()
@@ -31,7 +32,7 @@ const Canvas: React.FC = () => {
 			dragged: true,
 			options: { ...element.options, zIndex: 1 },
 			coordinates: { x: calculatedX, y: calculatedY },
-			content: `${elementKey}`,
+			/* content: `${elementKey}`, */
 		}
 		setElements(prevElements => [...prevElements, newElement])
 	}
@@ -63,6 +64,16 @@ const Canvas: React.FC = () => {
 		colors: { background: '#201f1e', pattern: '#133b57' },
 		sizes: { background: 50, pattern: 1.5 },
 	}
+	const handleOnClick = (e: React.MouseEvent, element: Element) => {
+		e.preventDefault()
+		console.log('click', element)
+
+		if (selectedElement?.key === element.key) {
+			setSelectedElement(null)
+			return
+		}
+		setSelectedElement(element)
+	}
 	return (
 		<div className='w-full h-full overflow-scroll'>
 			<div
@@ -87,8 +98,13 @@ const Canvas: React.FC = () => {
 								top: element.coordinates!.y,
 								zIndex: element.options.zIndex,
 							}}
-							className={element.className}
+							className={`${element.className} p-2 ${
+								selectedElement?.key === element.key
+									? 'border-2 border-red-500'
+									: ''
+							}`}
 							draggable
+							onClick={e => handleOnClick(e, element)}
 							onDragStart={e => handleDragStart(e, element)}>
 							{element.content}
 						</div>
