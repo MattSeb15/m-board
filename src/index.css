@@ -59,11 +59,11 @@ body {
 	border: dashed 3px;
 }
 .border-container.lined.thin {
-	border: solid 2px;
+	border: solid 1.5px;
 }
 .border-container.dotted.thin {
-	border: dotted 2px;
+	border: dotted 1.5px;
 }
 .border-container.dashed.thin {
-	border: dashed 2px;
+	border: dashed 1.5px;
 }

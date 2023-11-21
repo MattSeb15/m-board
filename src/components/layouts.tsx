@@ -78,7 +78,7 @@ export function BottomBar() {
 		{
 			id: 'element2',
 			key: 'key2',
-			className: 'bg-blue-500 truncate',
+			className: 'border-container lined thin truncate',
 			content: 'Elemento 2',
 			dragged: false,
 			resized: false,
@@ -116,6 +116,7 @@ export function BottomBar() {
 							width: element.options.width,
 							height: element.options.height,
 							zIndex: element.options.zIndex,
+							cursor: 'grab',
 						}}
 						draggable
 						onDragStart={e => handleDragStart(e, element)}>
