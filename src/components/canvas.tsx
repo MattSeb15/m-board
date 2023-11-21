@@ -66,17 +66,118 @@ const Canvas: React.FC = () => {
 	}
 	const handleOnClick = (e: React.MouseEvent, element: Element) => {
 		e.preventDefault()
-		console.log('click', element)
 
 		if (selectedElement?.key === element.key) {
-			setSelectedElement(null)
 			return
 		}
+		console.log('click', element)
 		setSelectedElement(element)
 	}
+
+	enum DirectionType {
+		NW,
+		NE,
+		SW,
+		SE,
+	}
+
+	const handleResize = (e: React.MouseEvent, direction: DirectionType) => {
+		// Evita que el evento se propague a otros manejadores de eventos
+		e.stopPropagation()
+		if (selectedElement === null || !selectedElement.coordinates) return
+
+		const initialMouseX = e.clientX
+
+		const initialWidth = selectedElement.options.width
+		const initialHeight = selectedElement.options.height
+
+		const initialX = selectedElement.coordinates!.x
+		const initialY = selectedElement.coordinates!.y
+
+		const aspectRatio = initialWidth / initialHeight
+
+		// Maneja el evento de movimiento del mouse
+		let newWidth: number, newHeight: number, newX: number, newY: number
+		const handleMouseMove = (e: MouseEvent) => {
+			// Calcula las nuevas dimensiones del elemento seleccionado según la dirección
+			// en la que se esté redimensionando
+			// implementar aspect ratio
+
+			switch (direction) {
+				case DirectionType.NW:
+					newWidth = initialWidth - (e.clientX - initialMouseX)
+					newHeight = newWidth / aspectRatio
+					newX = initialX + (e.clientX - initialMouseX)
+					newY = initialY + (initialHeight - newHeight)
+					break
+				case DirectionType.NE:
+					newWidth = initialWidth + (e.clientX - initialMouseX)
+					newHeight = newWidth / aspectRatio
+					newX = initialX
+					newY = initialY + (initialHeight - newHeight)
+					break
+				case DirectionType.SW:
+					newWidth = initialWidth - (e.clientX - initialMouseX)
+					newHeight = newWidth / aspectRatio
+					newX = initialX + (e.clientX - initialMouseX)
+					newY = initialY
+					break
+				case DirectionType.SE:
+					newWidth = initialWidth + (e.clientX - initialMouseX)
+					newHeight = newWidth / aspectRatio
+					newX = initialX
+					newY = initialY
+					break
+			}
+
+			// Actualiza el elemento seleccionado con las nuevas dimensiones
+			setElements(prevElements => {
+				return prevElements.map(prevElement => {
+					if (prevElement.key === selectedElement.key) {
+						return {
+							...prevElement,
+							options: {
+								...prevElement.options,
+								width: newWidth,
+								height: newHeight,
+							},
+							coordinates: { x: newX, y: newY },
+						}
+					}
+					return prevElement
+				})
+			})
+		}
+
+		// Maneja el evento de soltar el mouse
+		const handleMouseUp = () => {
+			console.log('mouseup')
+			document.removeEventListener('mousemove', handleMouseMove)
+			document.removeEventListener('mouseup', handleMouseUp)
+		}
+		document.addEventListener('mousemove', handleMouseMove)
+		document.addEventListener('mouseup', handleMouseUp)
+	}
+
+	const handleOnClickCanvas = (e: React.MouseEvent) => {
+		e.preventDefault()
+
+		if (selectedElement === null) return console.log('no element selected')
+		if (selectedElement && e.target !== canvasRef.current) {
+			console.log('click on element')
+			return
+		}
+
+		if (e.target === canvasRef.current) {
+			console.log('click on canvas')
+			setSelectedElement(null)
+		}
+	}
+
 	return (
 		<div className='w-full h-full overflow-scroll'>
 			<div
+				onClick={e => handleOnClickCanvas(e)}
 				className='canvas relative w-[10000px] h-[10000px]'
 				style={{
 					backgroundImage: `linear-gradient(${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px), linear-gradient(to right, ${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px)`,
@@ -92,21 +193,94 @@ const Canvas: React.FC = () => {
 							key={element.key}
 							style={{
 								position: 'absolute',
-								width: element.options.width,
-								height: element.options.height,
 								left: element.coordinates!.x,
 								top: element.coordinates!.y,
 								zIndex: element.options.zIndex,
 							}}
-							className={`${element.className} p-2 ${
+							className={`p-2 border-2 border-transparent ${
 								selectedElement?.key === element.key
-									? 'border-2 border-red-500'
+									? 'border-2 border-dashed border-gray-500'
 									: ''
-							}`}
-							draggable
-							onClick={e => handleOnClick(e, element)}
-							onDragStart={e => handleDragStart(e, element)}>
-							{element.content}
+							}`}>
+							<div
+								className={`${element.className}`}
+								draggable={selectedElement?.key === element.key}
+								onClick={e => handleOnClick(e, element)}
+								onDragStart={e => handleDragStart(e, element)}
+								style={{
+									cursor:
+										selectedElement?.key === element.key ? 'move' : 'pointer',
+									position: 'relative',
+									width: element.options.width,
+									height: element.options.height,
+									userSelect: 'none',
+								}}>
+								{element.content}
+							</div>
+							{selectedElement?.key === element.key && (
+								<>
+									<div
+										style={{
+											position: 'absolute',
+											top: -5,
+											left: -5,
+											width: '10px',
+											height: '10px',
+											backgroundColor: 'white',
+											border: '1px solid gray',
+											cursor: 'nwse-resize',
+										}}
+										onMouseDown={e => {
+											handleResize(e, DirectionType.NW)
+										}}
+									/>
+									<div
+										style={{
+											position: 'absolute',
+											top: -5,
+											right: -5,
+											width: '10px',
+											height: '10px',
+											backgroundColor: 'white',
+											border: '1px solid gray',
+											cursor: 'nesw-resize',
+										}}
+										onMouseDown={e => {
+											handleResize(e, DirectionType.NE)
+										}}
+									/>
+									<div
+										style={{
+											position: 'absolute',
+											bottom: -5,
+											left: -5,
+											width: '10px',
+											height: '10px',
+											backgroundColor: 'white',
+											border: '1px solid gray',
+											cursor: 'nesw-resize',
+										}}
+										onMouseDown={e => {
+											handleResize(e, DirectionType.SW)
+										}}
+									/>
+									<div
+										style={{
+											position: 'absolute',
+											bottom: -5,
+											right: -5,
+											width: '10px',
+											height: '10px',
+											backgroundColor: 'white',
+											border: '1px solid gray',
+											cursor: 'nwse-resize',
+										}}
+										onMouseDown={e => {
+											handleResize(e, DirectionType.SE)
+										}}
+									/>
+								</>
+							)}
 						</div>
 					)
 				})}

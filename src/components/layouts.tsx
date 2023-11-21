@@ -25,30 +25,34 @@ export function Aside() {
 			<div className='flex flex-col gap-2 bg-neutral-900/50'>
 				<h2 className='text-center'>Capas</h2>
 				<div className='flex flex-col gap-1 h-72 p-2 overflow-auto'>
-					{elements.map(element => {
-						return (
-							<div
-								onClick={e => handleOnClick(e, element)}
-								key={element.key}
-								style={{
-									border: `2px solid ${
-										selectedElement?.key === element.key ? 'red' : 'transparent'
-									}`,
-								}}
-								className='w-full p-2 h-10 cursor-pointer bg-neutral-700 flex items-center justify-between'>
-								<span className='w-32 truncate'>{element.content}</span>
-								<button
-									onClick={() => {
-										const newElements = elements.filter(
-											e => e.key !== element.key
-										)
-										setElements(newElements)
-									}}>
-									X
-								</button>
-							</div>
-						)
-					})}
+					{[...elements]
+						.sort((a, b) => a.options.zIndex - b.options.zIndex)
+						.map(element => {
+							return (
+								<div
+									onClick={e => handleOnClick(e, element)}
+									key={element.key}
+									style={{
+										border: `2px solid ${
+											selectedElement?.key === element.key
+												? 'red'
+												: 'transparent'
+										}`,
+									}}
+									className='w-full p-2 h-10 cursor-pointer bg-neutral-700 flex items-center justify-between'>
+									<span className='w-32 truncate'>{element.content}</span>
+									<button
+										onClick={() => {
+											const newElements = elements.filter(
+												e => e.key !== element.key
+											)
+											setElements(newElements)
+										}}>
+										X
+									</button>
+								</div>
+							)
+						})}
 					{elements.length === 0 && (
 						<div className='w-full p-2 h-full flex items-center justify-center'>
 							No hay elementos
@@ -65,7 +69,7 @@ export function BottomBar() {
 		{
 			id: 'element1',
 			key: 'key1',
-			className: 'border-container dashed thin truncate cursor-move',
+			className: 'border-container dashed thin truncate',
 			content: 'Elemento 1',
 			dragged: false,
 			options: { zIndex: 1, width: 80, height: 50 },
@@ -73,7 +77,7 @@ export function BottomBar() {
 		{
 			id: 'element2',
 			key: 'key2',
-			className: 'bg-blue-500 truncate cursor-move',
+			className: 'bg-blue-500 truncate',
 			content: 'Elemento 2',
 			dragged: false,
 			options: { zIndex: 1, width: 100, height: 40 },
