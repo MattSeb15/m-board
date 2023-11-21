@@ -5,8 +5,14 @@ import { CanvasContext } from '../static/canvas'
 
 const Canvas: React.FC = () => {
 	const canvasRef = useRef<HTMLDivElement>(null)
-	const { elements, setElements, selectedElement, setSelectedElement } =
-		useContext(CanvasContext)
+	const {
+		elements,
+		setElements,
+		selectedElement,
+		setSelectedElement,
+		zoom,
+		setZoom,
+	} = useContext(CanvasContext)
 
 	const handleCanvasDrop = (e: React.DragEvent) => {
 		e.preventDefault()
@@ -99,15 +105,27 @@ const Canvas: React.FC = () => {
 		setSelectedElement(element)
 	}
 
+	const handleWheel = (e: React.WheelEvent) => {
+		if (e.altKey) {
+			e.preventDefault()
+
+			e.preventDefault()
+			const scale = e.deltaY < 0 ? 1.1 : 0.9
+			setZoom(prevZoom => prevZoom * scale)
+		}
+	}
+
 	return (
 		<div className='w-full h-full overflow-scroll'>
 			<div
 				onDoubleClick={e => handleOnDobleClickCanvas(e)}
 				className='canvas relative w-[10000px] h-[10000px]'
+				onWheel={handleWheel}
 				style={{
 					backgroundImage: `linear-gradient(${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px), linear-gradient(to right, ${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px)`,
 					backgroundSize: `${grid.sizes.background}px ${grid.sizes.background}px`,
 					backgroundColor: `${grid.colors.background}`,
+					zoom: zoom,
 				}}
 				ref={canvasRef}
 				onDrop={handleCanvasDrop}

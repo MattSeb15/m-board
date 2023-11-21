@@ -3,6 +3,8 @@ import Element from './element'
 import { ReactNode } from 'react'
 
 type CanvasStateType = {
+	zoom: number
+	setZoom: React.Dispatch<React.SetStateAction<number>>
 	elements: Element[]
 	setElements: React.Dispatch<React.SetStateAction<Element[]>>
 	selectedElement: Element | null
@@ -10,6 +12,8 @@ type CanvasStateType = {
 }
 
 export const CanvasContext = createContext<CanvasStateType>({
+	zoom: 1,
+	setZoom: () => {},
 	elements: [],
 	setElements: () => {},
 	selectedElement: null,
@@ -22,10 +26,17 @@ export const CanvasProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
 	const [elements, setElements] = useState<Element[]>([])
 	const [selectedElement, setSelectedElement] = useState<Element | null>(null)
-
+	const [zoom, setZoom] = useState<number>(1)
 	return (
 		<CanvasContext.Provider
-			value={{ selectedElement, setSelectedElement, elements, setElements }}>
+			value={{
+				selectedElement,
+				setSelectedElement,
+				elements,
+				setElements,
+				zoom,
+				setZoom,
+			}}>
 			{children}
 		</CanvasContext.Provider>
 	)
