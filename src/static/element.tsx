@@ -3,9 +3,15 @@ export default interface Element {
 	id: string
 	className?: string
 	dragged: boolean
+	resized?: boolean
 	offset?: { x: number; y: number }
 	coordinates?: { x: number; y: number }
-	options: { zIndex: number; width: number; height: number }
+	options: {
+		zIndexBorder?: number
+		zIndex: number
+		width: number
+		height: number
+	}
 	content: string
 }
 

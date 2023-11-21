@@ -11,31 +11,41 @@ const Canvas: React.FC = () => {
 	const handleCanvasDrop = (e: React.DragEvent) => {
 		e.preventDefault()
 		const element: Element = JSON.parse(e.dataTransfer.getData('element'))
-		const { key, offset } = element
+		const { offset } = element
 		console.log('offset', offset)
 		const rect = canvasRef.current?.getBoundingClientRect()
-		const calculatedX = e.clientX - rect!.left - offset!.x
-		const calculatedY = e.clientY - rect!.top - offset!.y
+		const calculatedX = e.clientX - rect!.left - offset!.x - 8
+		const calculatedY = e.clientY - rect!.top - offset!.y - 8
 		if (element.dragged) {
 			console.log('element exist update position')
-			element.coordinates = { x: calculatedX, y: calculatedY }
-			return setElements(prevElements => [
-				...prevElements.filter(elem => elem.key !== key),
-				element,
-			])
+			/* element.coordinates = { x: calculatedX, y: calculatedY } */
+			//update element
+			const updatedElement: Element = {
+				...element,
+				coordinates: { x: calculatedX, y: calculatedY },
+			}
+
+			// Encuentra el índice del elemento que quieres actualizar
+			const index = elements.findIndex(el => el.key === element.key)
+
+			// Crea un nuevo arreglo de elementos, donde el elemento que quieres actualizar se reemplaza con su versión actualizada
+			setElements(prevElements =>
+				prevElements.map((el, i) => (i === index ? updatedElement : el))
+			)
+			return
 		}
-		console.log('COPIANDO ELEMENTO', element)
 		const elementKey = crypto.randomUUID()
 		const newElement: Element = {
 			...element,
 			key: elementKey,
 			dragged: true,
-			options: { ...element.options, zIndex: 1 },
+			options: { ...element.options, zIndex: elements.length + 1 },
 			coordinates: { x: calculatedX, y: calculatedY },
-			/* content: `${elementKey}`, */
+			content: `${element.content} - ${elements.length + 1}`,
 		}
 		setElements(prevElements => [...prevElements, newElement])
 	}
+
 	const handleCanvasDragOver = (e: React.DragEvent) => {
 		e.preventDefault()
 		const rect = canvasRef.current?.getBoundingClientRect()
@@ -53,7 +63,7 @@ const Canvas: React.FC = () => {
 		console.log('offset', offsetX, offsetY)
 		const elementWithOffset: Element = {
 			...element,
-			options: { ...element.options, zIndex: 1000 },
+			/* options: { ...element.options, zIndex: 1000 }, */
 			offset: { x: offsetX, y: offsetY },
 		}
 		e.dataTransfer.setData('element', JSON.stringify(elementWithOffset))
@@ -71,6 +81,7 @@ const Canvas: React.FC = () => {
 			return
 		}
 		console.log('click', element)
+
 		setSelectedElement(element)
 	}
 
@@ -81,10 +92,13 @@ const Canvas: React.FC = () => {
 		SE,
 	}
 
-	const handleResize = (e: React.MouseEvent, direction: DirectionType) => {
+	const handleResize = (
+		e: React.MouseEvent,
+		direction: DirectionType,
+		selectedElement: Element
+	) => {
 		// Evita que el evento se propague a otros manejadores de eventos
 		e.stopPropagation()
-		if (selectedElement === null || !selectedElement.coordinates) return
 
 		const initialMouseX = e.clientX
 
@@ -162,12 +176,7 @@ const Canvas: React.FC = () => {
 	const handleOnClickCanvas = (e: React.MouseEvent) => {
 		e.preventDefault()
 
-		if (selectedElement === null) return console.log('no element selected')
-		if (selectedElement && e.target !== canvasRef.current) {
-			console.log('click on element')
-			return
-		}
-
+		if (selectedElement === null) console.log('no element selected')
 		if (e.target === canvasRef.current) {
 			console.log('click on canvas')
 			setSelectedElement(null)
@@ -231,7 +240,7 @@ const Canvas: React.FC = () => {
 											cursor: 'nwse-resize',
 										}}
 										onMouseDown={e => {
-											handleResize(e, DirectionType.NW)
+											handleResize(e, DirectionType.NW, element)
 										}}
 									/>
 									<div
@@ -246,7 +255,7 @@ const Canvas: React.FC = () => {
 											cursor: 'nesw-resize',
 										}}
 										onMouseDown={e => {
-											handleResize(e, DirectionType.NE)
+											handleResize(e, DirectionType.NE, element)
 										}}
 									/>
 									<div
@@ -261,7 +270,7 @@ const Canvas: React.FC = () => {
 											cursor: 'nesw-resize',
 										}}
 										onMouseDown={e => {
-											handleResize(e, DirectionType.SW)
+											handleResize(e, DirectionType.SW, element)
 										}}
 									/>
 									<div
@@ -276,7 +285,7 @@ const Canvas: React.FC = () => {
 											cursor: 'nwse-resize',
 										}}
 										onMouseDown={e => {
-											handleResize(e, DirectionType.SE)
+											handleResize(e, DirectionType.SE, element)
 										}}
 									/>
 								</>

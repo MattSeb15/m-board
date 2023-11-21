@@ -26,7 +26,7 @@ export function Aside() {
 				<h2 className='text-center'>Capas</h2>
 				<div className='flex flex-col gap-1 h-72 p-2 overflow-auto'>
 					{[...elements]
-						.sort((a, b) => a.options.zIndex - b.options.zIndex)
+						.sort((a, b) => b.options.zIndex - a.options.zIndex)
 						.map(element => {
 							return (
 								<div
@@ -72,6 +72,7 @@ export function BottomBar() {
 			className: 'border-container dashed thin truncate',
 			content: 'Elemento 1',
 			dragged: false,
+			resized: false,
 			options: { zIndex: 1, width: 80, height: 50 },
 		},
 		{
@@ -80,6 +81,7 @@ export function BottomBar() {
 			className: 'bg-blue-500 truncate',
 			content: 'Elemento 2',
 			dragged: false,
+			resized: false,
 			options: { zIndex: 1, width: 100, height: 40 },
 		},
 		// Agrega más elementos aquí
