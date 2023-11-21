@@ -14,8 +14,8 @@ const Canvas: React.FC = () => {
 		const { offset } = element
 		console.log('offset', offset)
 		const rect = canvasRef.current?.getBoundingClientRect()
-		const calculatedX = e.clientX - rect!.left - offset!.x - 8
-		const calculatedY = e.clientY - rect!.top - offset!.y - 8
+		const calculatedX = e.clientX - rect!.left - offset!.x /* - 8 */
+		const calculatedY = e.clientY - rect!.top - offset!.y /* - 8 */
 		if (element.dragged) {
 			console.log('element exist update position')
 			/* element.coordinates = { x: calculatedX, y: calculatedY } */
@@ -35,15 +35,17 @@ const Canvas: React.FC = () => {
 			return
 		}
 		const elementKey = crypto.randomUUID()
+		const zIndex = elements.length + 1
 		const newElement: Element = {
 			...element,
 			key: elementKey,
 			dragged: true,
-			options: { ...element.options, zIndex: elements.length + 1 },
+			options: { ...element.options, zIndex, zIndexBorder: zIndex },
 			coordinates: { x: calculatedX, y: calculatedY },
 			content: `${element.content} - ${elements.length + 1}`,
 		}
 		setElements(prevElements => [...prevElements, newElement])
+		setSelectedElement(newElement)
 	}
 
 	const handleCanvasDragOver = (e: React.DragEvent) => {
@@ -56,34 +58,107 @@ const Canvas: React.FC = () => {
 		console.log(`X CLIENT: ${e.clientX}`, `Y CLIENT: ${e.clientY}`)
 	}
 
-	const handleDragStart = (e: React.DragEvent, element: Element) => {
-		const rect = (e.target as HTMLElement).getBoundingClientRect()
-		const offsetX = e.clientX - rect.left
-		const offsetY = e.clientY - rect.top
-		console.log('offset', offsetX, offsetY)
-		const elementWithOffset: Element = {
-			...element,
-			/* options: { ...element.options, zIndex: 1000 }, */
-			offset: { x: offsetX, y: offsetY },
-		}
-		e.dataTransfer.setData('element', JSON.stringify(elementWithOffset))
-
-		// Aumenta el z-index del elemento mientras se arrastra
-	}
 	const grid: Grid = {
 		colors: { background: '#201f1e', pattern: '#133b57' },
 		sizes: { background: 50, pattern: 1.5 },
 	}
-	const handleOnClick = (e: React.MouseEvent, element: Element) => {
-		e.preventDefault()
 
+	const handleOnDobleClickCanvas = (e: React.MouseEvent) => {
+		/* const condition = false */
+
+		if (selectedElement === null) return
+
+		if (e.target === canvasRef.current) {
+			console.log('click on canvas')
+			setSelectedElement(null)
+		}
+	}
+
+	const handleClickElement = (e: React.MouseEvent, element: Element) => {
+		e.preventDefault()
+		e.stopPropagation()
+		console.log('click element', element)
 		if (selectedElement?.key === element.key) {
 			return
 		}
-		console.log('click', element)
+
+		//update element with new z-border-index
+		const updatedElement: Element = {
+			...element,
+			options: { ...element.options, zIndexBorder: 99999 },
+		}
+		setElements(prevElements => {
+			return prevElements.map(prevElement => {
+				if (prevElement.key === element.key) {
+					return updatedElement
+				}
+				return prevElement
+			})
+		})
 
 		setSelectedElement(element)
 	}
+
+	return (
+		<div className='w-full h-full overflow-scroll'>
+			<div
+				onDoubleClick={e => handleOnDobleClickCanvas(e)}
+				className='canvas relative w-[10000px] h-[10000px]'
+				style={{
+					backgroundImage: `linear-gradient(${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px), linear-gradient(to right, ${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px)`,
+					backgroundSize: `${grid.sizes.background}px ${grid.sizes.background}px`,
+					backgroundColor: `${grid.colors.background}`,
+				}}
+				ref={canvasRef}
+				onDrop={handleCanvasDrop}
+				onDragOver={e => handleCanvasDragOver(e)}>
+				{elements.map(element => {
+					return (
+						<div
+							key={element.key}
+							style={{
+								position: 'absolute',
+								left: element.coordinates!.x,
+								top: element.coordinates!.y,
+							}}
+							/* className={`p-2 border-2 border-transparent ${
+								selectedElement?.key === element.key
+									? 'border-2 border-dashed border-gray-500'
+									: ''
+							}`} */
+						>
+							<div
+								onClick={e => {
+									handleClickElement(e, element)
+								}}
+								style={{
+									cursor:
+										selectedElement?.key === element.key ? 'move' : 'pointer',
+									position: 'relative',
+									width: element.options.width,
+									height: element.options.height,
+									userSelect: 'none',
+									zIndex: element.options.zIndex,
+								}}>
+								<div className={`${element.className} w-full h-full`}>
+									{element.content}
+								</div>
+							</div>
+							{selectedElement?.key === element.key && (
+								<ResizedContainer element={element} />
+							)}
+						</div>
+					)
+				})}
+			</div>
+		</div>
+	)
+}
+
+export default Canvas
+
+const ResizedContainer: React.FC<{ element: Element }> = ({ element }) => {
+	const { setElements, selectedElement } = useContext(CanvasContext)
 
 	enum DirectionType {
 		NW,
@@ -99,6 +174,8 @@ const Canvas: React.FC = () => {
 	) => {
 		// Evita que el evento se propague a otros manejadores de eventos
 		e.stopPropagation()
+
+		//evitar que se redimencione el elemento si ha llegado a minimos de altura y anchura
 
 		const initialMouseX = e.clientX
 
@@ -117,30 +194,57 @@ const Canvas: React.FC = () => {
 			// en la que se esté redimensionando
 			// implementar aspect ratio
 
+			const newWidthWithMin = (n: number) =>
+				Math.max(element.options.minWidth!, n)
+
+			const newHeightWithMin = (n: number) =>
+				Math.max(element.options.minHeight!, n)
+
+			const isExceedingMinWidth =
+				newWidth > element.options.minWidth! &&
+				newHeight > element.options.minHeight!
+
 			switch (direction) {
 				case DirectionType.NW:
-					newWidth = initialWidth - (e.clientX - initialMouseX)
-					newHeight = newWidth / aspectRatio
-					newX = initialX + (e.clientX - initialMouseX)
-					newY = initialY + (initialHeight - newHeight)
+					newWidth = newWidthWithMin(initialWidth - (e.clientX - initialMouseX))
+					newHeight = newHeightWithMin(newWidth / aspectRatio)
+					if (isExceedingMinWidth) {
+						newX = initialX + (e.clientX - initialMouseX)
+						newY = initialY + (initialHeight - newHeight)
+					} else {
+						newX = initialX + (initialWidth - newWidth)
+						newY = initialY + (initialHeight - newHeight)
+					}
 					break
 				case DirectionType.NE:
-					newWidth = initialWidth + (e.clientX - initialMouseX)
-					newHeight = newWidth / aspectRatio
-					newX = initialX
-					newY = initialY + (initialHeight - newHeight)
+					newWidth = newWidthWithMin(initialWidth + (e.clientX - initialMouseX))
+					newHeight = newHeightWithMin(newWidth / aspectRatio)
+					if (isExceedingMinWidth) {
+						newX = initialX
+						newY = initialY + (initialHeight - newHeight)
+					} else {
+						newX = initialX
+						newY = initialY + (initialHeight - newHeight)
+					}
+
 					break
 				case DirectionType.SW:
-					newWidth = initialWidth - (e.clientX - initialMouseX)
-					newHeight = newWidth / aspectRatio
-					newX = initialX + (e.clientX - initialMouseX)
-					newY = initialY
+					newWidth = newWidthWithMin(initialWidth - (e.clientX - initialMouseX))
+					newHeight = newHeightWithMin(newWidth / aspectRatio)
+					if (isExceedingMinWidth) {
+						newX = initialX + (e.clientX - initialMouseX)
+						newY = initialY
+					} else {
+						newX = initialX + (initialWidth - newWidth)
+						newY = initialY
+					}
 					break
 				case DirectionType.SE:
-					newWidth = initialWidth + (e.clientX - initialMouseX)
-					newHeight = newWidth / aspectRatio
+					newWidth = newWidthWithMin(initialWidth + (e.clientX - initialMouseX))
+					newHeight = newHeightWithMin(newWidth / aspectRatio)
 					newX = initialX
 					newY = initialY
+
 					break
 			}
 
@@ -155,6 +259,7 @@ const Canvas: React.FC = () => {
 								width: newWidth,
 								height: newHeight,
 							},
+							resized: true,
 							coordinates: { x: newX, y: newY },
 						}
 					}
@@ -164,8 +269,9 @@ const Canvas: React.FC = () => {
 		}
 
 		// Maneja el evento de soltar el mouse
-		const handleMouseUp = () => {
-			console.log('mouseup')
+		const handleMouseUp = (e: MouseEvent) => {
+			e.stopPropagation()
+
 			document.removeEventListener('mousemove', handleMouseMove)
 			document.removeEventListener('mouseup', handleMouseUp)
 		}
@@ -173,129 +279,133 @@ const Canvas: React.FC = () => {
 		document.addEventListener('mouseup', handleMouseUp)
 	}
 
-	const handleOnClickCanvas = (e: React.MouseEvent) => {
-		e.preventDefault()
-
-		if (selectedElement === null) console.log('no element selected')
-		if (e.target === canvasRef.current) {
-			console.log('click on canvas')
-			setSelectedElement(null)
+	const getStyleWithDirection = (
+		direction: DirectionType,
+		pos: number = -5
+	) => {
+		switch (direction) {
+			case DirectionType.NW:
+				return {
+					top: pos,
+					left: pos,
+					cursor: 'nwse-resize',
+				}
+			case DirectionType.NE:
+				return {
+					top: pos,
+					right: pos,
+					cursor: 'nesw-resize',
+				}
+			case DirectionType.SW:
+				return {
+					bottom: pos,
+					left: pos,
+					cursor: 'nesw-resize',
+				}
+			case DirectionType.SE:
+				return {
+					bottom: pos,
+					right: pos,
+					cursor: 'nwse-resize',
+				}
 		}
 	}
 
+	const listOfDirections = [
+		DirectionType.NW,
+		DirectionType.NE,
+		DirectionType.SW,
+		DirectionType.SE,
+	]
+
+	const handleDragStart = (e: React.DragEvent, element: Element) => {
+		const rect = (e.target as HTMLElement).getBoundingClientRect()
+		const offsetX = e.clientX - rect.left
+		const offsetY = e.clientY - rect.top
+		console.log('offset', offsetX, offsetY)
+		const elementWithOffset: Element = {
+			...element,
+			/* options: { ...element.options, zIndex: 1000 }, */
+			offset: { x: offsetX, y: offsetY },
+		}
+		e.dataTransfer.setData('element', JSON.stringify(elementWithOffset))
+
+		// Aumenta el z-index del elemento mientras se arrastra
+	}
+	/* const handleOnClick = (e: React.MouseEvent, element: Element) => {
+		e.preventDefault()
+
+		if (selectedElement?.key === element.key) {
+			return
+		}
+		console.log('click', element)
+
+		//update element with new z-border-index
+		const updatedElement: Element = {
+			...element,
+			options: { ...element.options, zIndexBorder: 99999 },
+		}
+		setElements(prevElements => {
+			return prevElements.map(prevElement => {
+				if (prevElement.key === element.key) {
+					return updatedElement
+				}
+				return prevElement
+			})
+		})
+
+		setSelectedElement(element)
+	} */
+
 	return (
-		<div className='w-full h-full overflow-scroll'>
+		<>
+			{listOfDirections.map(direction => {
+				return (
+					<div
+						key={`${direction}-${element.key}`}
+						style={{
+							position: 'absolute',
+							width: '10px',
+							height: '10px',
+							backgroundColor: 'white',
+							border: '1px solid gray',
+							zIndex: (element.options.zIndexBorder || 0) + 1,
+							...getStyleWithDirection(direction, -15),
+						}}
+						onMouseDown={e => {
+							handleResize(e, direction, element)
+						}}
+					/>
+				)
+			})}
 			<div
-				onClick={e => handleOnClickCanvas(e)}
-				className='canvas relative w-[10000px] h-[10000px]'
+				className='absolute bg-white/10 border border-gray cursor-move'
+				draggable={selectedElement?.key === element.key}
+				onDragStart={e => handleDragStart(e, element)}
 				style={{
-					backgroundImage: `linear-gradient(${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px), linear-gradient(to right, ${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px)`,
-					backgroundSize: `${grid.sizes.background}px ${grid.sizes.background}px`,
-					backgroundColor: `${grid.colors.background}`,
+					top: 0,
+					left: 0,
+					width: element.options.width,
+					height: element.options.height,
+					zIndex: element.options.zIndexBorder,
 				}}
-				ref={canvasRef}
-				onDrop={handleCanvasDrop}
-				onDragOver={e => handleCanvasDragOver(e)}>
-				{elements.map(element => {
-					return (
-						<div
-							key={element.key}
-							style={{
-								position: 'absolute',
-								left: element.coordinates!.x,
-								top: element.coordinates!.y,
-								zIndex: element.options.zIndex,
-							}}
-							className={`p-2 border-2 border-transparent ${
-								selectedElement?.key === element.key
-									? 'border-2 border-dashed border-gray-500'
-									: ''
-							}`}>
-							<div
-								className={`${element.className}`}
-								draggable={selectedElement?.key === element.key}
-								onClick={e => handleOnClick(e, element)}
-								onDragStart={e => handleDragStart(e, element)}
-								style={{
-									cursor:
-										selectedElement?.key === element.key ? 'move' : 'pointer',
-									position: 'relative',
-									width: element.options.width,
-									height: element.options.height,
-									userSelect: 'none',
-								}}>
-								{element.content}
-							</div>
-							{selectedElement?.key === element.key && (
-								<>
-									<div
-										style={{
-											position: 'absolute',
-											top: -5,
-											left: -5,
-											width: '10px',
-											height: '10px',
-											backgroundColor: 'white',
-											border: '1px solid gray',
-											cursor: 'nwse-resize',
-										}}
-										onMouseDown={e => {
-											handleResize(e, DirectionType.NW, element)
-										}}
-									/>
-									<div
-										style={{
-											position: 'absolute',
-											top: -5,
-											right: -5,
-											width: '10px',
-											height: '10px',
-											backgroundColor: 'white',
-											border: '1px solid gray',
-											cursor: 'nesw-resize',
-										}}
-										onMouseDown={e => {
-											handleResize(e, DirectionType.NE, element)
-										}}
-									/>
-									<div
-										style={{
-											position: 'absolute',
-											bottom: -5,
-											left: -5,
-											width: '10px',
-											height: '10px',
-											backgroundColor: 'white',
-											border: '1px solid gray',
-											cursor: 'nesw-resize',
-										}}
-										onMouseDown={e => {
-											handleResize(e, DirectionType.SW, element)
-										}}
-									/>
-									<div
-										style={{
-											position: 'absolute',
-											bottom: -5,
-											right: -5,
-											width: '10px',
-											height: '10px',
-											backgroundColor: 'white',
-											border: '1px solid gray',
-											cursor: 'nwse-resize',
-										}}
-										onMouseDown={e => {
-											handleResize(e, DirectionType.SE, element)
-										}}
-									/>
-								</>
-							)}
-						</div>
-					)
-				})}
-			</div>
-		</div>
+			/>
+		</>
+		/* <div
+			style={{
+				position: 'absolute',
+				top: -5,
+				left: -5,
+				width: '10px',
+				height: '10px',
+				backgroundColor: 'white',
+				border: '1px solid gray',
+				cursor: 'nwse-resize',
+				zIndex: element.options.zIndexBorder,
+			}}
+			onMouseDown={e => {
+				handleResize(e, DirectionType.NW, element)
+			}}
+		/> */
 	)
 }
-
-export default Canvas

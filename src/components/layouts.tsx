@@ -94,7 +94,12 @@ export function BottomBar() {
 		console.log('offset', offsetX, offsetY)
 		const elementWithOffset = {
 			...element,
-			options: { ...element.options, zIndex: 1100 },
+			options: {
+				...element.options,
+				zIndex: 1100,
+				minWidth: element.options.width,
+				minHeight: element.options.height,
+			},
 			offset: { x: offsetX, y: offsetY },
 		}
 		e.dataTransfer.setData('element', JSON.stringify(elementWithOffset))

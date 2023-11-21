@@ -9,6 +9,8 @@ export default interface Element {
 	options: {
 		zIndexBorder?: number
 		zIndex: number
+		minWidth?: number
+		minHeight?: number
 		width: number
 		height: number
 	}
