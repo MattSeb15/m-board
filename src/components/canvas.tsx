@@ -1,4 +1,4 @@
-import React, { useRef, useContext } from 'react'
+import React, { useRef, useContext, useEffect } from 'react'
 import Element from '../static/element'
 import Grid from '../static/grid'
 import { CanvasContext } from '../static/canvas'
@@ -6,6 +6,8 @@ import { CanvasContext } from '../static/canvas'
 const Canvas: React.FC = () => {
 	const canvasRef = useRef<HTMLDivElement>(null)
 	const {
+		mouseOrigin,
+		setMouseOrigin,
 		elements,
 		setElements,
 		selectedElement,
@@ -20,8 +22,11 @@ const Canvas: React.FC = () => {
 		const { offset } = element
 		console.log('offset', offset)
 		const rect = canvasRef.current?.getBoundingClientRect()
-		const calculatedX = e.clientX - rect!.left - offset!.x /* - 8 */
-		const calculatedY = e.clientY - rect!.top - offset!.y /* - 8 */
+		console.log('zoom', zoom)
+		const calculatedX = (e.clientX - rect!.left - offset!.x) / zoom /* - 8 */
+		console.log('calculatedX', calculatedX)
+		const calculatedY = (e.clientY - rect!.top - offset!.y) / zoom /* - 8 */
+		console.log('calculatedY', calculatedY)
 		if (element.dragged) {
 			console.log('element exist update position')
 			/* element.coordinates = { x: calculatedX, y: calculatedY } */
@@ -48,7 +53,8 @@ const Canvas: React.FC = () => {
 			dragged: true,
 			options: { ...element.options, zIndex, zIndexBorder: zIndex },
 			coordinates: { x: calculatedX, y: calculatedY },
-			content: `${element.content} - ${elements.length + 1}`,
+			layer: { name: `Capa ${elements.length + 1}`, visible: true },
+			content: `${element.content}`,
 		}
 		setElements(prevElements => [newElement, ...prevElements])
 		setSelectedElement(newElement)
@@ -105,27 +111,70 @@ const Canvas: React.FC = () => {
 		setSelectedElement(element)
 	}
 
-	const handleWheel = (e: React.WheelEvent) => {
+	/* const handleWheel = (e: React.WheelEvent) => {
 		if (e.altKey) {
-			e.preventDefault()
-
-			e.preventDefault()
-			const scale = e.deltaY < 0 ? 1.1 : 0.9
-			setZoom(prevZoom => prevZoom * scale)
+			const rect = canvasRef.current?.getBoundingClientRect()
+			const x = e.clientX - rect!.left
+			const y = e.clientY - rect!.top
+			setMouseOrigin({ x, y })
+			if (e.deltaY < 0) {
+				setZoom(prevZoom => Math.min(prevZoom + 0.1, 2))
+			} else {
+				setZoom(prevZoom => Math.max(prevZoom - 0.1, 0.5))
+			}
 		}
-	}
+	} */
+	useEffect(() => {
+		const canvas = canvasRef.current
+		if (!canvas) return
+		const handleWheel = (e: WheelEvent) => {
+			if (e.altKey) {
+				e.preventDefault()
+				const rect = canvasRef.current?.getBoundingClientRect()
+				const x = e.clientX - rect!.left
+				const y = e.clientY - rect!.top
+				setMouseOrigin({ x, y })
+				if (e.deltaY < 0) {
+					setZoom(prevZoom => Math.min(prevZoom + 0.05, 2))
+				} else {
+					setZoom(prevZoom => Math.max(prevZoom - 0.05, 0.5))
+				}
+			}
+		}
+		canvas.addEventListener(
+			'wheel',
+			e => {
+				handleWheel(e)
+			},
+			{ passive: false }
+		)
+		return () => {
+			canvas.removeEventListener('wheel', handleWheel)
+		}
+	}, [canvasRef, setMouseOrigin, setZoom])
 
+	const calculateBorderSize = (width: number, height: number) => {
+		const size = Math.sqrt(width * height)
+		console.log('size', Math.max(1.5, size / 100))
+		const result = Math.max(1.5, size / 100)
+		if (result > 5) return 5
+		return result
+	}
 	return (
-		<div className='w-full h-full overflow-scroll'>
+		<div
+			className='w-full h-full overflow-scroll
+			
+		'>
 			<div
 				onDoubleClick={e => handleOnDobleClickCanvas(e)}
 				className='canvas relative w-[10000px] h-[10000px]'
-				onWheel={handleWheel}
 				style={{
 					backgroundImage: `linear-gradient(${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px), linear-gradient(to right, ${grid.colors.pattern} ${grid.sizes.pattern}px, transparent ${grid.sizes.pattern}px)`,
 					backgroundSize: `${grid.sizes.background}px ${grid.sizes.background}px`,
 					backgroundColor: `${grid.colors.background}`,
-					zoom: zoom,
+					transform: `scale(${zoom})`,
+					transformOrigin: `${mouseOrigin.x}px ${mouseOrigin.y}px`,
+					transition: 'transform 0.1s ease-in-out',
 				}}
 				ref={canvasRef}
 				onDrop={handleCanvasDrop}
@@ -138,6 +187,7 @@ const Canvas: React.FC = () => {
 								position: 'absolute',
 								left: element.coordinates!.x,
 								top: element.coordinates!.y,
+								display: element.layer!.visible ? 'block' : 'none',
 							}}
 							/* className={`p-2 border-2 border-transparent ${
 								selectedElement?.key === element.key
@@ -158,7 +208,14 @@ const Canvas: React.FC = () => {
 									userSelect: 'none',
 									zIndex: element.options.zIndex,
 								}}>
-								<div className={`${element.className} w-full h-full`}>
+								<div
+									className={`${element.className} w-full h-full`}
+									style={{
+										borderWidth: `${calculateBorderSize(
+											element.options.width,
+											element.options.height
+										)}px`,
+									}}>
 									{element.content}
 								</div>
 							</div>

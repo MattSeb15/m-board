@@ -35,9 +35,11 @@ export function Aside() {
 	}
 
 	const handleOnClickZoomIn = () => {
+		if (zoom >= 2) return
 		setZoom(zoom + 0.1)
 	}
 	const handleOnClickZoomOut = () => {
+		if (zoom <= 0.5) return
 		setZoom(zoom - 0.1)
 	}
 	const handleOnClickZoomNormal = () => {
@@ -56,10 +58,19 @@ export function Aside() {
 		</PopoverContent>
 	)
 
+	const handleOnClickVisible = (
+		e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+		element: Element
+	) => {
+		e.stopPropagation()
+		element.layer!.visible = !element.layer!.visible
+		setElements([...elements])
+	}
+
 	return (
 		<aside className='bg-neutral-800 flex flex-col gap-2 justify-between family-kg h-full w-60 p-2'>
 			<div className='flex flex-col items-center flex-[8] gap-2 p-2 bg-neutral-700'>
-				<div className='bg-neutral-700/50 flex flex-col w-full p-2'>
+				<div className='bg-neutral-800 rounded-lg flex flex-col w-full p-2'>
 					<span>Zoom</span>
 					<div className='flex items-center justify-between'>
 						<span className='bg-neutral-600  h-full px-2 flex items-center rounded-md '>
@@ -95,13 +106,28 @@ export function Aside() {
 									style={{
 										border: `2px solid ${
 											selectedElement?.key === element.key
-												? 'red'
+												? 'white'
 												: 'transparent'
 										}`,
 									}}
-									className='w-full p-2 h-8 rounded-lg cursor-pointer bg-neutral-800 flex items-center justify-between'>
-									<div className='h-full w-8'></div>
-									<span className='w-32 truncate'>{element.content}</span>
+									className='w-full h-10 px-2 py-1 gap-1 rounded-lg cursor-pointer bg-neutral-800 flex items-center'>
+									<button
+										onClick={e => {
+											handleOnClickVisible(e, element)
+										}}
+										className='p-1 h-6 w-10 bg-neutral-900 rounded-lg'>
+										<Icon
+											icon='pixelarticons:eye'
+											style={{
+												display: element.layer?.visible ? 'block' : 'none',
+											}}
+											className='h-4 w-auto mx-auto'
+										/>
+									</button>
+									<div className='h-full w-14 border border-neutral-600'></div>
+									<span className='w-full text-xs truncate'>
+										{element.layer?.name ?? 'name'}
+									</span>
 									<Popover
 										size='sm'
 										key={element.key}
