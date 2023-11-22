@@ -2,10 +2,25 @@ import Canvas from './canvas'
 import Element from '../static/element'
 import { useState, useContext } from 'react'
 import { CanvasContext } from '../static/canvas'
+import { Icon } from '@iconify/react'
+
+import {
+	Button,
+	ButtonGroup,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@nextui-org/react'
 
 export function Aside() {
-	const { elements, setElements, selectedElement, setSelectedElement } =
-		useContext(CanvasContext)
+	const {
+		elements,
+		zoom,
+		setZoom,
+		setElements,
+		selectedElement,
+		setSelectedElement,
+	} = useContext(CanvasContext)
 
 	const handleOnClick = (
 		e: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -19,14 +34,59 @@ export function Aside() {
 		setSelectedElement(element)
 	}
 
+	const handleOnClickZoomIn = () => {
+		setZoom(zoom + 0.1)
+	}
+	const handleOnClickZoomOut = () => {
+		setZoom(zoom - 0.1)
+	}
+	const handleOnClickZoomNormal = () => {
+		if (zoom === 1) return
+		setZoom(1)
+	}
+
+	const content = (
+		<PopoverContent>
+			<div>Confirmation</div>
+			<div>Are you sure you want to continue with your action?</div>
+			<div>
+				<Button color='success'>Yes</Button>
+				<Button color='danger'>No</Button>
+			</div>
+		</PopoverContent>
+	)
+
 	return (
-		<aside className='bg-neutral-800 flex flex-col justify-between h-full w-60 p-2'>
-			<div className=''></div>
-			<div className='flex flex-col gap-2 bg-neutral-900/50'>
+		<aside className='bg-neutral-800 flex flex-col gap-2 justify-between family-kg h-full w-60 p-2'>
+			<div className='flex flex-col items-center flex-[8] gap-2 p-2 bg-neutral-700'>
+				<div className='bg-neutral-700/50 flex flex-col w-full p-2'>
+					<span>Zoom</span>
+					<div className='flex items-center justify-between'>
+						<span className='bg-neutral-600  h-full px-2 flex items-center rounded-md '>
+							{zoom.toFixed(2)}
+						</span>
+						<ButtonGroup
+							isIconOnly={true}
+							size='sm'
+							color='primary'>
+							<Button onClick={handleOnClickZoomIn}>
+								<span className='text-5xl'>+</span>
+							</Button>
+							<Button onClick={handleOnClickZoomNormal}>
+								<span className='text-1xl'>1.00</span>
+							</Button>
+							<Button onClick={handleOnClickZoomOut}>
+								<span className='text-5xl'>-</span>
+							</Button>
+						</ButtonGroup>
+					</div>
+				</div>
+			</div>
+			<div className='flex flex-col h-96 gap-2 bg-neutral-700'>
 				<h2 className='text-center'>Capas</h2>
-				<div className='flex flex-col gap-1 h-72 p-2 overflow-auto'>
+				<div className='flex flex-col gap-1 p-2 overflow-auto'>
 					{[...elements]
-						.sort((a, b) => b.options.zIndex - a.options.zIndex)
+						/* .sort((a, b) => b.options.zIndex - a.options.zIndex) */
 						.map(element => {
 							return (
 								<div
@@ -39,17 +99,27 @@ export function Aside() {
 												: 'transparent'
 										}`,
 									}}
-									className='w-full p-2 h-10 cursor-pointer bg-neutral-700 flex items-center justify-between'>
+									className='w-full p-2 h-8 rounded-lg cursor-pointer bg-neutral-800 flex items-center justify-between'>
+									<div className='h-full w-8'></div>
 									<span className='w-32 truncate'>{element.content}</span>
-									<button
-										onClick={() => {
-											const newElements = elements.filter(
-												e => e.key !== element.key
-											)
-											setElements(newElements)
-										}}>
-										X
-									</button>
+									<Popover
+										size='sm'
+										key={element.key}
+										placement='top'>
+										<PopoverTrigger>
+											<Button
+												isIconOnly={true}
+												color='primary'
+												size='sm'
+												className='capitalize text-white h-auto'>
+												<Icon
+													icon='pixelarticons:chevron-up'
+													className='h-5 w-auto'
+												/>
+											</Button>
+										</PopoverTrigger>
+										{content}
+									</Popover>
 								</div>
 							)
 						})}

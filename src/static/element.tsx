@@ -6,6 +6,10 @@ export default interface Element {
 	resized?: boolean
 	offset?: { x: number; y: number }
 	coordinates?: { x: number; y: number }
+	layer?: {
+		name: string
+		visible: boolean
+	}
 	options: {
 		zIndexBorder?: number
 		zIndex: number

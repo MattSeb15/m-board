@@ -50,7 +50,7 @@ const Canvas: React.FC = () => {
 			coordinates: { x: calculatedX, y: calculatedY },
 			content: `${element.content} - ${elements.length + 1}`,
 		}
-		setElements(prevElements => [...prevElements, newElement])
+		setElements(prevElements => [newElement, ...prevElements])
 		setSelectedElement(newElement)
 	}
 
